@@ -17,15 +17,7 @@ $(document).ready( function(){
 	function initdisplay(){
 		cnt = 0;
 
-
-		$('.kr .progress-bar').css( 'width', '0%' );
-		$('.jp .progress-bar').css( 'width', '0%' );
-		$('.cn .progress-bar').css( 'width', '0%' );
-
-		$('.price-kr').text( '' );
-		$('.price-jp').text( '' );
-		$('.price-cn').text( '' );
-
+		$('.progress-bar').css( 'width', '0%' ).text('');
 		$('.result').css( 'display', 'none' );
 		$('.loading').css( 'display', 'none' );
 	}
@@ -36,30 +28,37 @@ $(document).ready( function(){
 
 
 	// 환율 가져오기
-	var getCurrenty = function(){
-		var ccnt = 0;
+	var getCurrency = function(){
+		var hasSave = false;
+		if( localStorage != undefined ){
+			var currency = localJson.getItem('currency');
+			hasSave = (  currency != null && Date.now() - currency.time < 86400000 );
+		}
 
-		$.ajax({
-	      crossOrigin: true,
-	      url: "http://www.webservicex.net/CurrencyConvertor.asmx/ConversionRate?FromCurrency=CNY&ToCurrency=KRW",
-	      success: function( xml ) {
-	      		var val = $(xml).text();
-	      		if( $.isNumeric( val ) ) converter['cn'] = Number(val);
-	      }
-	  	});
+		
+		if( hasSave ){
+			converter = { 'cn':currency.cn, 'jp':currency.jp };
+		}else{
+			getCurrencyByCountry( 'jp' );
+			getCurrencyByCountry( 'cn' );
+		}
 
-	  	$.ajax({
-	      crossOrigin: true,
-	      url: "http://www.webservicex.net/CurrencyConvertor.asmx/ConversionRate?FromCurrency=JPY&ToCurrency=KRW",
-	      success: function( xml ) {
-	      		var val = $(xml).text();
-	      		if( $.isNumeric( val ) ) converter['jp'] = Number(val);
-	      }
-	  	});
-
-	};
-	getCurrenty();
-	delete getCurrenty();
+		function getCurrencyByCountry( country ){
+			$.ajax({
+		      crossOrigin: true,
+		      url: "http://www.webservicex.net/CurrencyConvertor.asmx/ConversionRate?FromCurrency="+ country.toLocaleUpperCase() +"Y&ToCurrency=KRW",
+		      success: function( xml ) {
+		      		var val = $(xml).text();
+		      		if( $.isNumeric( val ) ){
+		      			converter[country] = Number(val);
+		      			converter['time'] = Date.now();
+		      			localJson.setItem( 'currency', converter );
+		      		} 
+		      }
+		  	});
+		}
+	}
+	getCurrency();
 
 	// 메인 상품정보 가져오기
 	function getProductInfo( pNo ){
@@ -159,19 +158,6 @@ $(document).ready( function(){
 			$( '.' + country + ' .progress-bar').css( 'width', '100%' );
 			$('.price-' + country ).text( '제품이 없던지 품번이 다른가봉가?' );
 		}
-	}
-
-
-	//// Utils...
-	// 숫자를 화폐문자열로 변경
-	function commify(n) {
-	  var reg = /(^[+-]?\d+)(\d{3})/;   // 정규식
-	  n += '';                          // 숫자를 문자열로 변환
-
-	  while (reg.test(n))
-	    n = n.replace(reg, '$1' + ',' + '$2');
-
-	  return n;
 	}
 
 
